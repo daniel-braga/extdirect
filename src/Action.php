@@ -52,7 +52,9 @@ class Action implements ActionInterface
             $response['result'] = $result;
         }
         catch (\Exception $e) {
-            $response['result'] = 'Exception';
+            $response['type'] = 'exception';
+            $response['message'] = $e->getMessage();
+            $response['where'] = $e->getTraceAsString();
         }
 
         return $response;
