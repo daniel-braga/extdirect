@@ -77,13 +77,7 @@ final class Config
         return (isset($this->config['cache']['lifetime'])) ? $this->config['cache']['lifetime'] : 300;
     }
 
-    /**
-     * Get CORS config
-     *
-     * @return array
-     */
-    public function getCors()
-    {
-        return (isset($this->config['cors'])) ? $this->config['cors'] : [];
+    public static function includeFile($file) {
+        include_once $file;
     }
 }
