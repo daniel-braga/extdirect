@@ -152,8 +152,6 @@ An array with the following structure:
     ],
     ...
 
-### Discovery config
-
 **cache.directory:** The directory that will be used to store the cached data.
 
 **cache.lifetime:** The cache lifetime, in seconds.
