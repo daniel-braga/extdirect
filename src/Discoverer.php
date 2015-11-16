@@ -106,7 +106,14 @@ class Discoverer
                 $method['formHandler'] = true;
             }
 
-            $methods[] = $method;
+            if (isset($methodAnnotations['ExtDirect\ResultTransformer'])) {
+                if (is_array($methodAnnotations['ExtDirect\ResultTransformer']) &&
+                    is_string($methodAnnotations['ExtDirect\ResultTransformer'][0])) {
+                    $method['resultTransformer'] = $methodAnnotations['ExtDirect\ResultTransformer'][0];
+                }
+            }
+
+            $methods[$method['name']] = $method;
         }
         return $methods;
     }
@@ -116,7 +123,7 @@ class Discoverer
      *
      * @return array
      */
-    public function parseClasses()
+    public function mapClasses()
     {
         $paths = $this->config->getDiscovererPaths();
         $files = $classes = $actions = $classMap = [];
@@ -128,7 +135,8 @@ class Discoverer
             $fileContent = file_get_contents($file);
             $classes = array_merge($classes, array_keys(AnnotationsParser::parsePhp($fileContent)));
 
-            require_once $file;
+            Config::includeFile($file);
+
             foreach ($classes as $className) {
                 $class = new \ReflectionClass($className);
                 if (!$class->isInstantiable()) {
@@ -188,7 +196,13 @@ class Discoverer
         }
 
         foreach($classMap as $actionName => $actionProps) {
-            $api['actions'][$actionName] = $actionProps['methods'];
+            array_walk($actionProps['methods'], function(&$method) {
+                if (isset($method['resultTransformer'])) {
+                    unset($method['resultTransformer']);
+                }
+            });
+
+            $api['actions'][$actionName] = array_values($actionProps['methods']);
         }
 
         return $api;
@@ -214,7 +228,7 @@ class Discoverer
         if ($cache->contains($cacheKey)) {
             $classMap = $cache->fetch($cacheKey);
         } else {
-            $classMap = $this->parseClasses();
+            $classMap = $this->mapClasses();
             $cache->save($cacheKey, $classMap, $cacheLifetime);
         }
 
