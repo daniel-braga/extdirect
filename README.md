@@ -25,28 +25,6 @@ An PHP implementation of the Sencha Ext Direct Specification
             'directory' => __DIR__ . '/cache',
             'lifetime' => 60,
         ],
-        'cors' => [
-            'requestAllowedOrigins' => [ // A list of domains that can consume your API 
-                'http://www.myadomain.com' => true,
-            ],
-            'requestAllowedMethods' => [
-                'GET' => true,
-                'OPTIONS' => true,
-                'POST' => true
-            ],
-            'requestAllowedHeaders' => [
-                'content-type'     => true,
-                'x-requested-with' => true,
-                'origin'           => true,
-            ],
-            'requestCredentialsSupported' => true,
-            'checkHost' => true,
-            'serverOrigin' => [
-                'scheme' => 'http',
-                'host'   => 'localhost',
-                'port'   => '8081',
-            ]
-        ],
         'api' => [
             'descriptor' => 'window.uERP_REMOTING_API',
             'declaration' => [
@@ -142,8 +120,6 @@ Here, you can call actions/methods from your API. If you exposed the `Util\Serve
 
 3.  Cache mechanism. Your API classes/methods will be cached to avoid overloading the discovery process. You can configure
     the cache lifetime.
-    
-4.  [CORS support](http://enable-cors.org). You can host your API in a server other than your web application server.
 
 ## Configuration
 An array with the following structure:
@@ -153,16 +129,6 @@ An array with the following structure:
 -   cache `array`
     -   directory `string` 
     -   lifetime `int`
--   cors
-    -   requestAllowedOrigins `array`
-    -   requestAllowedMethods `array`
-    -   requestAllowedHeaders `array`
-    -   requestCredentialsSupported `boolean`
-    -   checkHost `boolean`
-    -   serverOrigin
-        -   scheme `string` 
-        -   host `string` 
-        -   port `string` 
 -   api
     -   descriptor `string` 
     -   declaration
@@ -200,52 +166,7 @@ An array with the following structure:
     ],
     ...
     
-### CORS config
-
-**cors.requestAllowedOrigins:** A list of allowed request origins (lower-cased, no trail slashes). 
-Value `true` enables and value `null` disables origin. 
-If all origins '*' are enabled all settings for other origins are ignored. 
-
-**cors.requestAllowedMethods:** A list of allowed request methods (case sensitive). Value `true` enables and value `null` disables method.
-
-**cors.requestAllowedHeaders:** A list of allowed request headers (lower-cased). Value `true` enables and value `null` disables header.
-
-**cors.requestCredentialsSupported:** If access with credentials is supported by the resource.
-
-**cors.checkHost:** If request 'Host' header should be checked against server's origin.
-
-**cors.serverOrigin.scheme:** Used to compare the Host header of request, if checkHost is enabled.
-
-**cors.serverOrigin.host:** Used to compare the Host header of request, if checkHost is enabled.
-
-**cors.serverOrigin.port:** Used to compare the Host header of request, if checkHost is enabled.
-
-    <?php
-    ...
-    'cors' => [
-        'requestAllowedOrigins' => [
-            'http://example.com:123' => true,
-            'http://evil.com'        => null,
-            '*'                      => null,
-        ],
-        'requestAllowedMethods' => [
-            'GET' => true,
-            'OPTIONS' => true,
-            'POST' => true
-        ],
-        'requestAllowedHeaders' => [
-            'content-type'     => true,
-            'x-requested-with' => true,
-            'origin'           => true,
-        ],
-        'requestCredentialsSupported' => true,
-        'serverOrigin' => [
-            'scheme' => 'http',
-            'host'   => 'localhost',
-            'port'   => '8081',
-        ]
-    ],
-    ...
+### API config
 
 **api.descriptor:** The JavaScript variable which will receive the API declaration.
 
@@ -260,10 +181,3 @@ Cache mechanism require it.
 
 **api.declaration.timeout:** The number of milliseconds to use as the timeout for every Method invocation in this Remoting API.
 (not implemented)
-
-
-## TODO
-
-1. Handles forms
-2. Handles file uploads
- 
