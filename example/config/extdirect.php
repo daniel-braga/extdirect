@@ -9,28 +9,6 @@ return [
         'directory' => __DIR__ . '/../cache',
         'lifetime' => 60,
     ],
-    'cors' => [
-        'requestAllowedOrigins' => [
-            'http://localhost:8080' => true,
-        ],
-        'requestAllowedMethods' => [
-            'GET' => true,
-            'OPTIONS' => true,
-            'POST' => true
-        ],
-        'requestAllowedHeaders' => [
-            'content-type'     => true,
-            'x-requested-with' => true,
-            'origin'           => true,
-        ],
-        'requestCredentialsSupported' => true,
-        'checkHost' => true,
-        'serverOrigin' => [
-            'scheme' => 'http',
-            'host'   => 'localhost',
-            'port'   => '8081',
-        ]
-    ],
     'api' => [
         'descriptor' => 'window.uERP_REMOTING_API',
         'declaration' => [
