@@ -1,7 +1,7 @@
 <?php
 namespace ExtDirect;
 
-use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Zend\Diactoros\Response\EmitterInterface;
 use Zend\Diactoros\ServerRequestFactory;
@@ -9,11 +9,6 @@ use Zend\Diactoros\Response;
 use Zend\Diactoros\Response\SapiEmitter;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Cache\FilesystemCache;
-use Neomerx\Cors\Contracts\Strategies\SettingsStrategyInterface;
-use Neomerx\Cors\Strategies\Settings;
-use Neomerx\Cors\Contracts\AnalysisResultInterface;
-use Neomerx\Cors\Contracts\AnalyzerInterface;
-use Neomerx\Cors\Analyzer;
 
 
 /**
@@ -67,30 +62,99 @@ class Router
     }
 
     /**
-     * @param RequestInterface $request
+     * @param ServerRequestInterface $request
+     * @return bool
+     */
+    public function isFormRequest(ServerRequestInterface $request)
+    {
+        $contentTypes = $request->getHeader('Content-Type');
+        foreach($contentTypes as $contentType) {
+            if (false !== strpos($contentType, 'application/x-www-form-urlencoded')) {
+                return true;
+            }
+            if (false !== strpos($contentType, 'multipart/form-data')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function isUpload(ServerRequestInterface $request)
+    {
+        $contentTypes = $request->getHeader('Content-Type');
+        foreach($contentTypes as $contentType) {
+            if (false !== strpos($contentType, 'multipart/form-data')) {
+                return (count($request->getUploadedFiles()) > 0);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param $actionMap
+     * @param $method
+     * @return bool
+     */
+    public function methodIsAllowed($actionMap, $method)
+    {
+        $allowed = isset($actionMap['methods'][$method]);
+
+        return $allowed;
+    }
+
+    /**
+     *
+     * @param ServerRequestInterface $request
      * @param array $classMap
      * @return Action[]
      */
-    public function getActions(RequestInterface $request, array $classMap)
+    public function getActions(ServerRequestInterface $request, array $classMap)
     {
+        $actions = [];
+
+        if ($this->isFormRequest($request)) {
+            $call = $request->getParsedBody();
+
+            $actionName = $call['extAction'];
+            if (!isset($classMap[$actionName])) {
+                throw new \InvalidArgumentException(sprintf('Unknow action %s', $actionName));
+            }
+            $actionMap = $classMap[$actionName];
+
+            if (!$this->methodIsAllowed($actionMap, $call['extMethod'])) {
+                throw new \InvalidArgumentException(sprintf('Method %s is not allowed', $call['extMethod']));
+            }
+
+            $postVars = $call;
+            foreach (['extAction', 'extMethod', 'extTID', 'extUpload', 'extType'] as $extVar) {
+                if (isset($postVars[$extVar])) {
+                    unset($postVars[$extVar]);
+                }
+            }
+
+            $actions[] = new Action($actionMap, $call['extMethod'], $postVars, $call['extTID'], true, $request->getUploadedFiles());
+
+            return $actions;
+        }
         $calls = json_decode($request->getBody()->getContents());
 
         if (!is_array($calls)) {
             $calls = array($calls);
         }
 
-        $actions = [];
         foreach($calls as $call) {
             if (isset($call->type) && $call->type == 'rpc') {
                 $actionName = $call->action;
                 if (!isset($classMap[$actionName])) {
                     throw new \InvalidArgumentException(sprintf('Unknow action %s', $actionName));
                 }
-                $map = $classMap[$actionName];
+                $actionMap = $classMap[$actionName];
 
-                // @TODO check if method is allowed
+                if (!$this->methodIsAllowed($actionMap, $call->method)) {
+                    throw new \InvalidArgumentException(sprintf('Method %s is not allowed', $call->method));
+                }
 
-                $actions[] = new Action($map, $call->method, $call->data, $call->tid);
+                $actions[] = new Action($actionMap, $call->method, $call->data, $call->tid);
             }
         }
 
@@ -98,135 +162,13 @@ class Router
     }
 
     /**
-     * @param SettingsStrategyInterface|null $corsSettings
-     * @return SettingsStrategyInterface|Settings
-     */
-    public function getCorsSettings(SettingsStrategyInterface $corsSettings = null)
-    {
-        $corsSettings = $corsSettings ?: new Settings();
-        $corsCfg = $this->config->getCors();
-
-        foreach($corsCfg as $cfgKey => $cfgValue) {
-            $methodName = 'set' . ucfirst($cfgKey);
-            if (method_exists($corsSettings, $methodName)) {
-                $corsSettings->{$methodName}($cfgValue);
-            }
-        }
-
-        return $corsSettings;
-    }
-
-    /**
      *
-     *
-     * @param AnalyzerInterface $corsAnalyzer
-     * @param RequestInterface $request
-     * @param ResponseInterface $response
-     * @param $success
-     * @return ResponseInterface
-     */
-    public function analyzeCors(AnalyzerInterface $corsAnalyzer,
-                                RequestInterface $request,
-                                ResponseInterface $response,
-                                &$success)
-    {
-        $cors = $corsAnalyzer->analyze($request);
-
-        switch ($cors->getRequestType()) {
-            case AnalysisResultInterface::ERR_NO_HOST_HEADER:
-            case AnalysisResultInterface::ERR_ORIGIN_NOT_ALLOWED:
-            case AnalysisResultInterface::ERR_METHOD_NOT_SUPPORTED:
-            case AnalysisResultInterface::ERR_HEADERS_NOT_SUPPORTED:
-                $success = false;
-                return $response->withStatus(403);
-
-            case AnalysisResultInterface::TYPE_PRE_FLIGHT_REQUEST:
-                $corsHeaders = $cors->getResponseHeaders();
-
-                foreach ($corsHeaders as $header => $value) {
-                    $response = $response->withHeader($header, $value);
-                }
-                $success = false;
-                return $response->withStatus(200);
-
-            case AnalysisResultInterface::TYPE_REQUEST_OUT_OF_CORS_SCOPE:
-                $success = true;
-                return $response;
-            default:
-                $corsHeaders = $cors->getResponseHeaders();
-                foreach ($corsHeaders as $header => $value) {
-                    $response = $response->withHeader($header, $value);
-                }
-                $success = true;
-                return $response->withStatus(200);
-        }
-    }
-
-    /**
-     * Route using CORS analyzer
-     *
-     * @param RequestInterface|null $request
-     * @param ResponseInterface|null $response
-     * @param CacheProvider|null $cache
-     * @param SettingsStrategyInterface $corsSettings
-     * @param AnalyzerInterface $corsAnalyzer
-     * @return array
-     */
-    public function routeWithCors(RequestInterface $request = null,
-                          ResponseInterface $response = null,
-                          CacheProvider $cache = null,
-                          SettingsStrategyInterface $corsSettings = null,
-                          AnalyzerInterface $corsAnalyzer = null)
-    {
-        $cacheDir = $this->config->getCacheDirectory();
-        $cacheKey = $this->config->getApiProperty('id');
-        $cacheLifetime = $this->config->getCacheLifetime();
-
-        $request  = $request ?: ServerRequestFactory::fromGlobals();
-        $response = $response ?: new Response();
-        $cache    = $cache ?: new FilesystemCache($cacheDir);
-        $corsSettings  = $corsSettings ?: $this->getCorsSettings();
-        $corsAnalyzer  = $corsAnalyzer ?: Analyzer::instance($corsSettings);
-
-        /** @var ResponseInterface $response */
-        $response = $this->analyzeCors($corsAnalyzer, $request, $response, $corsPassed);
-
-        if ($corsPassed) {
-            if ($cache->contains($cacheKey)) {
-                $classMap = $cache->fetch($cacheKey);
-
-            } else {
-                $discoverer = new Discoverer($this->config);
-                $classMap = $discoverer->parseClasses();
-
-                $cache->save($cacheKey, $classMap, $cacheLifetime);
-            }
-
-            $actionsResults = [];
-
-            // @TODO parse POST method (formAction)
-            // @TODO parse upload
-
-            $actions = $this->getActions($request, $classMap);
-            foreach ($actions as $action) {
-                $actionsResults[] = $action->run();
-            }
-
-            $response->getBody()->write(json_encode($actionsResults, \JSON_UNESCAPED_UNICODE));
-        }
-
-        $this->response = $response->withHeader('Content-Type', 'application/json');
-    }
-
-    /**
-     * Route without CORS. In a middleware application you can use an CORS middleware.
-     *
-     * @param RequestInterface|null $request
+     * @param ServerRequestInterface|null $request
      * @param ResponseInterface|null $response
      * @param CacheProvider|null $cache
      * @return array
      */
-    public function route(RequestInterface $request = null,
+    public function route(ServerRequestInterface $request = null,
                           ResponseInterface $response = null,
                           CacheProvider $cache = null)
     {
@@ -243,24 +185,33 @@ class Router
 
         } else {
             $discoverer = new Discoverer($this->config);
-            $classMap = $discoverer->parseClasses();
+            $classMap = $discoverer->mapClasses();
 
             $cache->save($cacheKey, $classMap, $cacheLifetime);
         }
 
         $actionsResults = [];
-
-        // @TODO parse POST method (formAction)
-        // @TODO parse upload
-
         $actions = $this->getActions($request, $classMap);
+        $upload = false;
         foreach ($actions as $action) {
             $actionsResults[] = $action->run();
+            if ($action->isUpload()) $upload = true;
         }
 
-        $response->getBody()->write(json_encode($actionsResults, \JSON_UNESCAPED_UNICODE));
+        if ($upload) {
+            $result = sprintf('<html><body><textarea>%s</textarea></body></html>',
+                preg_replace('/&quot;/', '\\&quot;', json_encode($actionsResults[0], \JSON_UNESCAPED_UNICODE)));
 
-        $this->response = $response->withHeader('Content-Type', 'application/json');
+            $response->getBody()->write($result);
+            $this->response = $response->withHeader('Content-Type', 'text/html');
+        } else {
+            if (count($actionsResults) == 1) {
+                $response->getBody()->write(json_encode($actionsResults[0], \JSON_UNESCAPED_UNICODE));
+            } else {
+                $response->getBody()->write(json_encode($actionsResults, \JSON_UNESCAPED_UNICODE));
+            }
+            $this->response = $response->withHeader('Content-Type', 'application/json');
+        }
     }
 
     /**
