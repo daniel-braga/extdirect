@@ -16,6 +16,7 @@ class Action implements ActionInterface
     /**
      * Action constructor.
      *
+     * @param Config $config
      * @param array $classMap
      * @param $method
      * @param $arguments
@@ -23,7 +24,7 @@ class Action implements ActionInterface
      * @param bool|false $formHandler
      * @param array $files
      */
-    public function __construct(array $classMap, $method, $arguments, $tid, $formHandler = false, array $files = [])
+    public function __construct(Config $config, array $classMap, $method, $arguments, $tid, $formHandler = false, array $files = [])
     {
         $this->name = $classMap['action'];
         $this->class = $classMap['class'];
@@ -36,6 +37,8 @@ class Action implements ActionInterface
 
         if (isset($classMap['methods'][$method]['resultTransformer'])) {
             $this->resultTransformer = $classMap['methods'][$method]['resultTransformer'];
+        } elseif($config->getResultTransformer()) {
+            $this->resultTransformer = $config->getResultTransformer();
         }
     }
 
@@ -116,10 +119,16 @@ class Action implements ActionInterface
             $arguments = $this->arguments;
         }
 
-        $result = call_user_func_array(array($this->class, $this->method), $arguments);
-
-        if (is_callable($this->resultTransformer)) {
-            $result = call_user_func($this->resultTransformer, $this, $result);
+        $result = null;
+        try {
+            $result = call_user_func_array(array($this->class, $this->method), $arguments);
+            if (is_callable($this->resultTransformer)) {
+                $result = call_user_func($this->resultTransformer, $this, $result);
+            }
+        } catch (\Exception $ex) {
+            if (is_callable($this->resultTransformer)) {
+                $result = call_user_func($this->resultTransformer, $this, $result, $ex);
+            }
         }
 
         return $result;

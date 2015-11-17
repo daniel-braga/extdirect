@@ -3,7 +3,20 @@ return [
     'discoverer' => [
         'paths' => [
             __DIR__ . '/../src',
-        ]
+        ],
+        'resultTransformer' => function(\ExtDirect\ActionInterface $action, $result, \Exception $ex = null) {
+            if (is_null($ex)) {
+                return [
+                    'success' => true,
+                    'data' => $result
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'data' => $ex->getMessage()
+                ];
+            }
+        }
     ],
     'cache' => [
         'directory' => __DIR__ . '/../cache',

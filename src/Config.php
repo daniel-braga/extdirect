@@ -77,6 +77,14 @@ final class Config
         return (isset($this->config['cache']['lifetime'])) ? $this->config['cache']['lifetime'] : 300;
     }
 
+    /**
+     * @return callable|null
+     */
+    public function getResultTransformer()
+    {
+        return (isset($this->config['discoverer']['resultTransformer'])) ? $this->config['discoverer']['resultTransformer'] : null;
+    }
+
     public static function includeFile($file) {
         include_once $file;
     }

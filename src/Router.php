@@ -132,7 +132,7 @@ class Router
                 }
             }
 
-            $actions[] = new Action($actionMap, $call['extMethod'], $postVars, $call['extTID'], true, $request->getUploadedFiles());
+            $actions[] = new Action($this->config, $actionMap, $call['extMethod'], $postVars, $call['extTID'], true, $request->getUploadedFiles());
 
             return $actions;
         }
@@ -154,7 +154,7 @@ class Router
                     throw new \InvalidArgumentException(sprintf('Method %s is not allowed', $call->method));
                 }
 
-                $actions[] = new Action($actionMap, $call->method, $call->data, $call->tid);
+                $actions[] = new Action($this->config, $actionMap, $call->method, $call->data, $call->tid);
             }
         }
 
