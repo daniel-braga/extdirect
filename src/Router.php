@@ -180,6 +180,26 @@ class Router
         $response = $response ?: new Response();
         $cache    = $cache ?: new FilesystemCache($cacheDir);
 
+        if (count($request->getHeader('Ext-Direct-Token1')) == 0) {
+            throw new \InvalidArgumentException('The Token1 is invalid');
+        }
+        if (count($request->getHeader('Ext-Direct-Token2')) == 0) {
+            throw new \InvalidArgumentException('The Token2 is invalid');
+        }
+        $token1 = $request->getHeader('Ext-Direct-Token1')[0];
+        $token2 = $request->getHeader('Ext-Direct-Token2')[0];
+
+        session_id($token1);
+        session_start();
+
+        if (!$_SESSION['Ext-Direct-Token2']) {
+            throw new \InvalidArgumentException('The session data is invalid');
+        }
+
+        if (strcmp($_SESSION['Ext-Direct-Token2'], $token2) != 0) {
+            throw new \InvalidArgumentException('Token2 verification failed');
+        }
+
         if ($cache->contains($cacheKey)) {
             $classMap = $cache->fetch($cacheKey);
 

@@ -3,8 +3,8 @@ namespace ExtDirect;
 
 use Nette\Reflection\AnnotationsParser;
 use Psr\Http\Message\ResponseInterface;
-use Zend\Diactoros\Response\EmitterInterface;
 use Zend\Diactoros\Response;
+use Zend\Diactoros\Response\EmitterInterface;
 use Zend\Diactoros\Response\SapiEmitter;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Cache\FilesystemCache;
@@ -234,13 +234,33 @@ class Discoverer
 
         $api = $this->buildApi($classMap);
 
-        $body = sprintf('%s = %s;',
+        $body = sprintf('%s=%s;',
             $this->config->getApiDescriptor(),
             json_encode($api, \JSON_UNESCAPED_UNICODE));
 
         $response->getBody()->write($body);
 
-        $this->response = $response->withHeader('Content-Type', 'text/javascript');
+        if (function_exists('openssl_random_pseudo_bytes')) {
+            $token1 = bin2hex(openssl_random_pseudo_bytes(16));
+            $token2 = bin2hex(openssl_random_pseudo_bytes(16));
+        } else {
+            $token1 = uniqid();
+            $token2 = uniqid();
+        }
+
+        session_id($token1);
+        session_start();
+
+        $_SESSION['Ext-Direct-Token2'] = $token2;
+
+        $response->getBody()->write(sprintf('Ext.define(\'Ext.overrides.data.Connection\',{'.
+            'override:\'Ext.data.Connection\',request:function(o){o=Ext.apply(o||{},{'.
+            'headers:{\'Ext-Direct-Token1\':\'%s\',\'Ext-Direct-Token2\':\'%s\'}});'.
+            'this.callParent([o]);}});', $token1, $token2));
+
+        $this->response = $response->withHeader('Content-Type', 'text/javascript')
+            ->withHeader('Set-Ext-Direct-Token1', $token1)
+            ->withHeader('Set-Ext-Direct-Token2', $token2);
     }
 
     /**
