@@ -126,14 +126,14 @@ class Discoverer
     public function mapClasses()
     {
         $paths = $this->config->getDiscovererPaths();
-        $files = $classes = $actions = $classMap = [];
+        $files = $classMap = [];
         foreach ($paths as $path) {
             $files = array_merge($files, $this->loadDir($path));
         }
 
         foreach ($files as $file) {
             $fileContent = file_get_contents($file);
-            $classes = array_merge($classes, array_keys(AnnotationsParser::parsePhp($fileContent)));
+            $classes = array_keys(AnnotationsParser::parsePhp($fileContent));
 
             Config::includeFile($file);
 
