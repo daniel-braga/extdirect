@@ -248,13 +248,24 @@ class Discoverer
             $token2 = uniqid();
         }
 
-        session_id($token1);
+        if (isset($_COOKIE['Ext-Direct-Token1'])) {
+            $token1 = $_COOKIE['Ext-Direct-Token1'];
+        } else {
+            session_id($token1);
+        }
+
         session_start();
 
+        if (isset($_SESSION['Ext-Direct-Token2'])) {
+            $token2 = $_SESSION['Ext-Direct-Token2'];
+        }
+
         $_SESSION['Ext-Direct-Token2'] = $token2;
+        setcookie('Ext-Direct-Token1', $token1, 0, '/', session_get_cookie_params()['domain']);
 
         $response->getBody()->write(sprintf('Ext.define(\'Ext.overrides.data.Connection\',{'.
             'override:\'Ext.data.Connection\',request:function(o){o=Ext.apply(o||{},{'.
+            'withCredentials:true,cors:true,'.
             'headers:{\'Ext-Direct-Token1\':\'%s\',\'Ext-Direct-Token2\':\'%s\'}});'.
             'this.callParent([o]);}});', $token1, $token2));
 
