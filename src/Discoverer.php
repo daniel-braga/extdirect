@@ -98,9 +98,12 @@ class Discoverer
             }
             $method = [
                 'name' => $reflectedMethod->getName(),
-                'len' => $reflectedMethod->getNumberOfParameters(),
                 'formHandler' => false
             ];
+
+            if (!isset($methodAnnotations['ExtDirect\IgnoreParamsLength'])) {
+                $method['len'] = $reflectedMethod->getNumberOfParameters();
+            }
 
             if (isset($methodAnnotations['ExtDirect\FormHandler'])) {
                 $method['formHandler'] = true;
