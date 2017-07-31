@@ -45,7 +45,7 @@ final class Config
      */
     public function getApiProperty($prop)
     {
-        return (isset($this->config['api'][$prop])) ? $this->config['api'][$prop] : null;
+        return (isset($this->config['api']['declaration'][$prop])) ? $this->config['api']['declaration'][$prop] : null;
     }
 
     /**
