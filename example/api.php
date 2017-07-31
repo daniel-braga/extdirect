@@ -5,3 +5,4 @@ $config = new ExtDirect\Config(include __DIR__ . '/config/extdirect.php');
 
 $discoverer = new ExtDirect\Discoverer($config);
 $discoverer->start();
+echo $discoverer->getResponse()->getBody();
