@@ -3,18 +3,18 @@
   "type": "library",
   "description": "An PHP implementation of the Ext Direct Specification",
   "keywords": ["sencha", "extjs", "direct"],
-  "homepage": "http://docs.sencha.com/extjs/6.0/backend_connectors/direct/specification.html",
+  "homepage": "http://docs.sencha.com/extjs/6.5.1/guides/backend_connectors/direct/specification.html",
   "license": "MIT",
   "authors": [
     {"name": "Daniel Braga", "email": "daniel@danielbraga.com"}
   ],
   "require": {
-    "php": ">=5.5",
-    "nette/reflection": "^2.3",
-    "zendframework/zend-diactoros": "^1.1",
-    "doctrine/cache": "^1.5",
-    "neomerx/cors-psr7": "^0.2.0",
-    "zendframework/zend-stratigility": "^1.1"
+    "php": ">=5.6",
+    "nette/reflection": "^2.4.2",
+    "zendframework/zend-diactoros": "^1.4",
+    "doctrine/cache": "^1.7",
+    "neomerx/cors-psr7": "^1.0",
+    "zendframework/zend-stratigility": "^2.0.1"
   },
   "autoload": {
     "psr-4": { "ExtDirect\\": "src/" }
